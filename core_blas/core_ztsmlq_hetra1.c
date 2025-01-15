@@ -10,7 +10,7 @@
  *
  **/
 
-#include "core_blas.h"
+#include "plasma_core_blas.h"
 #include "plasma_types.h"
 #include "plasma_internal.h"
 #include "core_lapack.h"
@@ -105,43 +105,45 @@
  * @retval < 0 if -i, the i-th argument had an illegal value
  *
  ******************************************************************************/
-int core_ztsmlq_hetra1(plasma_enum_t side, plasma_enum_t trans,
-                       int m1, int n1, int m2, int n2, int k, int ib,
-                             plasma_complex64_t *A1, int lda1,
-                             plasma_complex64_t *A2, int lda2,
-                       const plasma_complex64_t *V,  int ldv,
-                       const plasma_complex64_t *T,  int ldt,
-                       plasma_complex64_t *work, int ldwork)
+int plasma_core_ztsmlq_hetra1(
+    plasma_enum_t side, plasma_enum_t trans,
+    int m1, int n1, int m2, int n2, int k, int ib,
+          plasma_complex64_t *A1, int lda1,
+          plasma_complex64_t *A2, int lda2,
+    const plasma_complex64_t *V,  int ldv,
+    const plasma_complex64_t *T,  int ldt,
+    plasma_complex64_t *work, int ldwork)
 {
     int i, j;
 
     // Check input arguments
-    if ( (m1 != n1) ) {
-        coreblas_error("illegal value of m1, n1");
+    if (m1 != n1) {
+        plasma_coreblas_error("illegal value of m1, n1");
         return -3;
     }
 
     // in-place transposition of A1
-    for (j = 0; j < n1; j++){
+    for (j = 0; j < n1; ++j) {
         A1[j + j*lda1] = conj(A1[j + j*lda1]);
 
-        for (i = j+1; i < m1; i++){
+        for (i = j+1; i < m1; ++i) {
             *work = *(A1 + i + j*lda1);
             *(A1 + i + j*lda1) = conj(*(A1 + j + i*lda1));
             *(A1 + j + i*lda1) = conj(*work);
         }
     }
 
-    core_ztsmlq(side, trans, m1, n1, m2, n2, k, ib,
-                A1, lda1, A2, lda2,
-                V,  ldv,  T,  ldt,
-                work, ldwork);
+    plasma_core_ztsmlq(
+        side, trans, m1, n1, m2, n2, k, ib,
+        A1, lda1, A2, lda2,
+        V,  ldv,  T,  ldt,
+        work, ldwork);
 
     // in-place transposition of A1
-    for (j = 0; j < n1; j++){
+    for (j = 0; j < n1; ++j) {
         A1[j + j*lda1] = conj(A1[j + j*lda1]);
 
-        for (i = j+1; i < m1; i++){
+        for (i = j+1; i < m1; ++i) {
             *work = *(A1 + i + j*lda1);
             *(A1 + i + j*lda1) = conj(*(A1 + j + i*lda1));
             *(A1 + j + i*lda1) = conj(*work);
@@ -152,14 +154,15 @@ int core_ztsmlq_hetra1(plasma_enum_t side, plasma_enum_t trans,
 }
 
 /******************************************************************************/
-void core_omp_ztsmlq_hetra1(plasma_enum_t side, plasma_enum_t trans,
-                            int m1, int n1, int m2, int n2, int k, int ib,
-                                  plasma_complex64_t *A1, int lda1,
-                                  plasma_complex64_t *A2, int lda2,
-                            const plasma_complex64_t *V,  int ldv,
-                            const plasma_complex64_t *T,  int ldt,
-                            plasma_workspace_t work,
-                            plasma_sequence_t *sequence, plasma_request_t *request)
+void plasma_core_omp_ztsmlq_hetra1(
+    plasma_enum_t side, plasma_enum_t trans,
+    int m1, int n1, int m2, int n2, int k, int ib,
+          plasma_complex64_t *A1, int lda1,
+          plasma_complex64_t *A2, int lda2,
+    const plasma_complex64_t *V,  int ldv,
+    const plasma_complex64_t *T,  int ldt,
+    plasma_workspace_t work,
+    plasma_sequence_t *sequence, plasma_request_t *request)
 {
     int nb = n1;
     // assuming m1 == nb, n1 == nb, m2 == nb, n2 == nb
@@ -176,13 +179,14 @@ void core_omp_ztsmlq_hetra1(plasma_enum_t side, plasma_enum_t trans,
             int ldwork = side == PlasmaLeft ? ib : nb;
 
             // call the kernel
-            int info = core_ztsmlq_hetra1(side, trans,
-                                          m1, n1, m2, n2, k, ib,
-                                          A1, lda1,
-                                          A2, lda2,
-                                          V, ldv,
-                                          T, ldt,
-                                          W, ldwork);
+            int info = plasma_core_ztsmlq_hetra1(
+                side, trans,
+                m1, n1, m2, n2, k, ib,
+                A1, lda1,
+                A2, lda2,
+                V, ldv,
+                T, ldt,
+                W, ldwork);
 
             if (info != PlasmaSuccess) {
                 plasma_error_with_code("Error in call to COREBLAS in argument",

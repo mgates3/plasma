@@ -10,15 +10,16 @@
  *
  **/
 #include "bulge.h"
-#include <string.h>
-#include "core_blas.h"
+#include "plasma_core_blas.h"
 #include "plasma_types.h"
 #include "plasma_internal.h"
 #include "core_lapack.h"
 
-#define A(m,n)   (A + LDA * (n) + ((m)-(n)))
+#include <string.h>
+
+#define A(m, n)  (A + lda*(n) + ((m) - (n)))
 #define V(m)     (V + (m))
-#define TAU(m)   (TAU + (m))
+#define tau(m)   (tau + (m))
 
 /***************************************************************************//**
  *
@@ -40,27 +41,27 @@
  *
  *******************************************************************************
  *
- * @param[in] N
+ * @param[in] n
  *          The order of the matrix A.
  *
- * @param[in] NB
+ * @param[in] nb
  *          The size of the band.
  *
- * @param[in, out] A
- *          A pointer to the matrix A of size (2*NB+1)-by-N.
+ * @param[in,out] A
+ *          A pointer to the matrix A of size (2*nb + 1)-by-n.
  *
- * @param[in] LDA
- *          The leading dimension of the matrix A. LDA >= max(1,2*NB+1)
+ * @param[in] lda
+ *          The leading dimension of the matrix A. lda >= max(1, 2*nb + 1)
  *
  * @param[in, out] V
- *          PLASMA_Complex64_t array, dimension N if eigenvalue only
+ *          plasma_complex64_t array, dimension n if eigenvalue only
  *          requested or (LDV*blkcnt*Vblksiz) if Eigenvectors requested
  *          The Householder reflectors of the previous type 1 are used here
  *          to continue update then new one are generated to eliminate the
  *          bulge and stored in this array.
  *
- * @param[in, out] TAU
- *          PLASMA_Complex64_t array, dimension (N).
+ * @param[in, out] tau
+ *          plasma_complex64_t array, dimension (n).
  *          The scalar factors of the Householder reflectors of the previous
  *          type 1 are used here to continue update then new one are generated
  *          to eliminate the bulge and stored in this array.
@@ -80,11 +81,11 @@
  *          it serve to calculate the pointer to the position where to store the
  *          Vs and Ts.
  *
- * @param[in] WANTZ
+ * @param[in] wantz
  *          constant which indicate if Eigenvalue are requested or both
  *          Eigenvalue/Eigenvectors.
  *
- * @param[in] WORK
+ * @param[in] work
  *          Workspace of size nb.
  *
  *******************************************************************************
@@ -98,42 +99,46 @@
 /***************************************************************************
  *          TYPE 2-BAND Lower-columnwise-Householder
  ***************************************************************************/
-void core_zhbtype2cb(int N, int NB,
-                     plasma_complex64_t *A, int LDA,
-                     plasma_complex64_t *V, plasma_complex64_t *TAU,
-                     int st, int ed, int sweep, int Vblksiz, int WANTZ,
-                     plasma_complex64_t *WORK)
+void plasma_core_zhbtype2cb(
+    int n, int nb,
+    plasma_complex64_t *A, int lda,
+    plasma_complex64_t *V, plasma_complex64_t *tau,
+    int st, int ed, int sweep, int Vblksiz, int wantz,
+    plasma_complex64_t *work)
 {
     plasma_complex64_t ctmp;
-    int J1, J2, len, lem, LDX;
+    int J1, J2, len, lem, ldx;
     int blkid, vpos, taupos, tpos;
 
-    if( WANTZ == 0 ) {
-        vpos   = ((sweep+1)%2)*N + st;
-        taupos = ((sweep+1)%2)*N + st;
-    } else {
-        findVTpos(N, NB, Vblksiz, sweep, st,
+    if (wantz == 0) {
+        vpos   = ((sweep + 1)%2)*n + st;
+        taupos = ((sweep + 1)%2)*n + st;
+    }
+    else {
+        findVTpos(n, nb, Vblksiz, sweep, st,
                   &vpos, &taupos, &tpos, &blkid);
     }
 
-    LDX = LDA-1;
+    ldx = lda-1;
     J1  = ed+1;
-    J2  = imin(ed+NB,N-1);
+    J2  = imin(ed+nb, n-1);
     len = ed-st+1;
     lem = J2-J1+1;
 
-    if( lem > 0 ) {
-        /* Apply remaining right commming from the top block */
+    if (lem > 0) {
+        // Apply remaining right commming from the top block.
         LAPACKE_zlarfx_work(LAPACK_COL_MAJOR, lapack_const(PlasmaRight),
-                            lem, len, V(vpos), *(TAU(taupos)), A(J1, st), LDX, WORK);
+                            lem, len, V(vpos), *(tau(taupos)),
+                            A(J1, st), ldx, work);
     }
 
-    if( lem > 1 ) {
-        if( WANTZ == 0 ) {
-            vpos   = ((sweep+1)%2)*N + J1;
-            taupos = ((sweep+1)%2)*N + J1;
-        } else {
-            findVTpos(N,NB,Vblksiz,sweep,J1, &vpos, &taupos, &tpos, &blkid);
+    if (lem > 1) {
+        if (wantz == 0 ) {
+            vpos   = ((sweep+1)%2)*n + J1;
+            taupos = ((sweep+1)%2)*n + J1;
+        }
+        else {
+            findVTpos(n, nb, Vblksiz, sweep, J1, &vpos, &taupos, &tpos, &blkid);
         }
 
         /* Remove the first column of the created bulge */
@@ -143,22 +148,21 @@ void core_zhbtype2cb(int N, int NB,
         memset(A(J1+1, st), 0, (lem-1)*sizeof(plasma_complex64_t));
 
         /* Eliminate the col at st */
-        LAPACKE_zlarfg_work( lem, A(J1, st), V(vpos+1), 1, TAU(taupos) );
+        LAPACKE_zlarfg_work( lem, A(J1, st), V(vpos+1), 1, tau(taupos) );
 
         /*
-         * Apply left on A(J1:J2,st+1:ed)
+         * Apply left on A(J1:J2, st+1:ed)
          * We decrease len because we start at col st+1 instead of st.
          * col st is the col that has been revomved;
          */
         len = len-1;
 
-        ctmp = conj(*TAU(taupos));
+        ctmp = conj(*tau(taupos));
         LAPACKE_zlarfx_work(LAPACK_COL_MAJOR, lapack_const(PlasmaLeft),
-                            lem, len, V(vpos), ctmp, A(J1, st+1), LDX, WORK);
+                            lem, len, V(vpos), ctmp, A(J1, st+1), ldx, work);
     }
-    return;
 }
 /***************************************************************************/
 #undef A
 #undef V
-#undef TAU
+#undef tau

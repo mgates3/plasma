@@ -10,7 +10,7 @@
  *
  **/
 
-#include "core_blas.h"
+#include "plasma_core_blas.h"
 #include "plasma_types.h"
 #include "plasma_internal.h"
 #include "core_lapack.h"
@@ -107,37 +107,38 @@
  * @retval < 0 if -i, the i-th argument had an illegal value
  *
  ******************************************************************************/
-int core_ztsmlq_corner(int m1, int n1, int m2, int n2,
-                       int m3, int n3, int k, int ib,
-                             plasma_complex64_t *A1, int lda1,
-                             plasma_complex64_t *A2, int lda2,
-                             plasma_complex64_t *A3, int lda3,
-                       const plasma_complex64_t *V,  int ldv,
-                       const plasma_complex64_t *T,  int ldt,
-                       plasma_complex64_t *work, int ldwork)
+int plasma_core_ztsmlq_corner(
+    int m1, int n1, int m2, int n2,
+    int m3, int n3, int k, int ib,
+          plasma_complex64_t *A1, int lda1,
+          plasma_complex64_t *A2, int lda2,
+          plasma_complex64_t *A3, int lda3,
+    const plasma_complex64_t *V,  int ldv,
+    const plasma_complex64_t *T,  int ldt,
+    plasma_complex64_t *work, int ldwork)
 {
     plasma_enum_t side;
     plasma_enum_t trans;
     int i, j;
 
     // Check input arguments
-    if ( m1 != n1 ) {
-        coreblas_error("Illegal value of M1, N1");
+    if (m1 != n1) {
+        plasma_coreblas_error("Illegal value of M1, N1");
         return -1;
     }
     int nb = n1;
     // Rebuild the symmetric block: work <- A1
-    for (i = 0; i < m1; i++)
-        for (j = i; j < n1; j++){
+    for (i = 0; i < m1; ++i)
+        for (j = i; j < n1; ++j) {
             *(work + i + j*ldwork) = *(A1 + i + j*lda1);
-            if (j > i){
+            if (j > i) {
                 *(work + j + i*ldwork) =  conj( *(work + i + j*ldwork) );
             }
         }
 
     //  Copy the transpose of A2: work+nb*ldwork <- A2'
-    for (j = 0; j < n2; j++)
-        for (i = 0; i < m2; i++){
+    for (j = 0; j < n2; ++j)
+        for (i = 0; i < m2; ++i) {
             *(work + j + (i + nb) * ldwork) = conj( *(A2 + i + j*lda2) );
         }
 
@@ -145,25 +146,27 @@ int core_ztsmlq_corner(int m1, int n1, int m2, int n2,
     trans = Plasma_ConjTrans;
 
     //  Right application on |A1 A2|
-    core_ztsmlq(side, trans, m1, n1, m2, n2, k, ib,
-                work, ldwork, A2, lda2,
-                V, ldv, T, ldt,
-                work+3*nb*ldwork, ldwork);
+    plasma_core_ztsmlq(
+        side, trans, m1, n1, m2, n2, k, ib,
+        work, ldwork, A2, lda2,
+        V, ldv, T, ldt,
+        work+3*nb*ldwork, ldwork);
 
     //  Rebuild the symmetric block: work+2*nb*ldwork <- A3
-    for (i = 0; i < m3; i++)
-        for (j = i; j < n3; j++){
+    for (i = 0; i < m3; ++i)
+        for (j = i; j < n3; ++j) {
             *(work + i + (j + 2*nb) * ldwork) = *(A3 + i + j*lda3);
-            if (j > i){
+            if (j > i) {
                 *(work + j + (i + 2*nb) * ldwork) =  conj ( *(work + i + (j + 2*nb) * ldwork) );
             }
         }
 
     //  Right application on | A2' A3 |
-    core_ztsmlq(side, trans, n2, m2, m3, n3, k, ib,
-                work+nb*ldwork, ldwork, work+2*nb*ldwork, ldwork,
-                V, ldv, T, ldt,
-                work + 3*nb*ldwork, ldwork);
+    plasma_core_ztsmlq(
+        side, trans, n2, m2, m3, n3, k, ib,
+        work+nb*ldwork, ldwork, work+2*nb*ldwork, ldwork,
+        V, ldv, T, ldt,
+        work + 3*nb*ldwork, ldwork);
 
     side = PlasmaLeft;
     trans = PlasmaNoTrans;
@@ -172,48 +175,51 @@ int core_ztsmlq_corner(int m1, int n1, int m2, int n2,
     //  Left application on | A1  |
     //                      | A2' |
     //========================================================
-    core_ztsmlq(side, trans, m1, n1, n2, m2, k, ib,
-                work, ldwork, work+nb*ldwork, ldwork,
-                V, ldv, T, ldt,
-                work + 3*nb*ldwork, ldwork);
+    plasma_core_ztsmlq(
+        side, trans, m1, n1, n2, m2, k, ib,
+        work, ldwork, work+nb*ldwork, ldwork,
+        V, ldv, T, ldt,
+        work + 3*nb*ldwork, ldwork);
 
     //========================================================
     //  Copy back the final result to the upper part of A1
     //  A1 = work
     //========================================================
-    for (i = 0; i < m1; i++)
-        for (j = i; j < n1; j++)
+    for (i = 0; i < m1; ++i)
+        for (j = i; j < n1; ++j)
             *(A1 + i + j*lda1) = *(work + i + j*ldwork);
 
     //========================================================
     //  Left application on | A2 |
     //                     | A3 |
     //========================================================
-    core_ztsmlq(side, trans, m2, n2, m3, n3, k, ib,
-                A2, lda2, work+2*nb*ldwork, ldwork,
-                V, ldv, T, ldt,
-                work + 3*nb*ldwork, ldwork);
+    plasma_core_ztsmlq(
+        side, trans, m2, n2, m3, n3, k, ib,
+        A2, lda2, work+2*nb*ldwork, ldwork,
+        V, ldv, T, ldt,
+        work + 3*nb*ldwork, ldwork);
 
     //========================================================
     //  Copy back the final result to the upper part of A3
     //  A3 = work+2*nb*ldwork
     //========================================================
-    for (i = 0; i < m3; i++)
-        for (j = i; j < n3; j++)
+    for (i = 0; i < m3; ++i)
+        for (j = i; j < n3; ++j)
             *(A3 + i + j*lda3) = *(work + i + (j+ 2*nb) * ldwork);
 
     return PlasmaSuccess;
 }
 
-void core_omp_ztsmlq_corner(int m1, int n1, int m2, int n2,
-                            int m3, int n3, int k, int ib,
-                                  plasma_complex64_t *A1, int lda1,
-                                  plasma_complex64_t *A2, int lda2,
-                                  plasma_complex64_t *A3, int lda3,
-                            const plasma_complex64_t *V,  int ldv,
-                            const plasma_complex64_t *T,  int ldt,
-                            plasma_workspace_t work,
-                            plasma_sequence_t *sequence, plasma_request_t *request)
+void plasma_core_omp_ztsmlq_corner(
+    int m1, int n1, int m2, int n2,
+    int m3, int n3, int k, int ib,
+          plasma_complex64_t *A1, int lda1,
+          plasma_complex64_t *A2, int lda2,
+          plasma_complex64_t *A3, int lda3,
+    const plasma_complex64_t *V,  int ldv,
+    const plasma_complex64_t *T,  int ldt,
+    plasma_workspace_t work,
+    plasma_sequence_t *sequence, plasma_request_t *request)
 {
     int nb = n1;
     // assuming m1 == nb, n1 == nb, m2 == nb, n2 == nb
@@ -232,13 +238,14 @@ void core_omp_ztsmlq_corner(int m1, int n1, int m2, int n2,
             int ldwork = nb;
 
             // call the kernel
-            int info = core_ztsmlq_corner(m1, n1, m2, n2, m3, n3, k, ib,
-                                          A1, lda1,
-                                          A2, lda2,
-                                          A3, lda3,
-                                          V, ldv,
-                                          T, ldt,
-                                          W, ldwork);
+            int info = plasma_core_ztsmlq_corner(
+                m1, n1, m2, n2, m3, n3, k, ib,
+                A1, lda1,
+                A2, lda2,
+                A3, lda3,
+                V, ldv,
+                T, ldt,
+                W, ldwork);
 
             if (info != PlasmaSuccess) {
                 plasma_error_with_code("Error in call to COREBLAS in argument",

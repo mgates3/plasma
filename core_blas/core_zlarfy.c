@@ -10,7 +10,7 @@
  *
  **/
 
-#include "core_blas.h"
+#include "plasma_core_blas.h"
 #include "plasma_types.h"
 #include "core_lapack.h"
 
@@ -55,14 +55,15 @@
  *          Workspace.
  *
  ******************************************************************************/
-void core_zlarfy(int N,
-            plasma_complex64_t *A, int LDA,
-            const plasma_complex64_t *V,
-            const plasma_complex64_t *TAU,
-            plasma_complex64_t *WORK)
+void plasma_core_zlarfy(
+    int N,
+    plasma_complex64_t *A, int LDA,
+    const plasma_complex64_t *V,
+    const plasma_complex64_t *TAU,
+    plasma_complex64_t *WORK)
 {
-    static plasma_complex64_t zzero =  0.0;
-    static plasma_complex64_t zmone = -1.0;
+    const plasma_complex64_t zzero =  0.0;
+    const plasma_complex64_t zmone = -1.0;
 
     int j;
     plasma_complex64_t dtmp;
@@ -75,7 +76,7 @@ void core_zlarfy(int N,
 
     /* cblas_zdotc_sub(N, WORK, 1, V, 1, &dtmp);*/
     dtmp = 0.;
-    for (j = 0; j < N ; j++)
+    for (j = 0; j < N; ++j)
         dtmp = dtmp + conj(WORK[j]) * V[j];
 
     /* Compute 1/2 X'*V*t = 1/2*dtmp*tau  */

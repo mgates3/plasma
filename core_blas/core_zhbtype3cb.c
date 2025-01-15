@@ -10,54 +10,54 @@
  *
  **/
 
-#include "core_blas.h"
+#include "plasma_core_blas.h"
 #include "plasma_types.h"
 #include "core_lapack.h"
 #include "bulge.h"
 
-#define A(m,n)   (A + LDA * (n) + ((m)-(n)))
+#define A(m, n)  (A + lda*(n) + ((m) - (n)))
 #define V(m)     (V + (m))
-#define TAU(m)   (TAU + (m))
+#define tau(m)   (tau + (m))
 
 /***************************************************************************//**
  *
  * @ingroup CORE_plasma_complex64_t
  *
  *  CORE_zhbtype3cb is a kernel that will operate on a region (triangle) of data
- *  bounded by st and ed. This kernel apply a left+right update on the hermitian
- *  triangle.  Note that this kernel is very similar to type1 but does not do an
+ *  bounded by st and ed. This kernel applies a left+right update on the Hermitian
+ *  triangle. Note that this kernel is very similar to type1 but does not do an
  *  elimination.
  *
- *  All detail are available on technical report or SC11 paper.
+ *  All details are available in the technical report or SC11 paper.
  *  Azzam Haidar, Hatem Ltaief, and Jack Dongarra. 2011.
  *  Parallel reduction to condensed forms for symmetric eigenvalue problems
  *  using aggregated fine-grained and memory-aware kernels. In Proceedings
  *  of 2011 International Conference for High Performance Computing,
- *  Networking, Storage and Analysis (SC '11). ACM, New York, NY, USA, ,
- *  Article 8 , 11 pages.
+ *  Networking, Storage and Analysis (SC '11). ACM, New York, NY, USA,
+ *  Article 8, 11 pages.
  *  http://doi.acm.org/10.1145/2063384.2063394
  *
  *******************************************************************************
  *
- * @param[in] N
+ * @param[in] n
  *          The order of the matrix A.
  *
- * @param[in] NB
+ * @param[in] nb
  *          The size of the band.
  *
- * @param[in, out] A
- *          A pointer to the matrix A of size (2*NB+1)-by-N.
+ * @param[in,out] A
+ *          A pointer to the matrix A of size (2*nb+1)-by-n.
  *
- * @param[in] LDA
- *          The leading dimension of the matrix A. LDA >= max(1,2*NB+1)
+ * @param[in] lda
+ *          The leading dimension of the matrix A. lda >= max(1, 2*nb+1)
  *
  * @param[in] V
- *          plasma_complex64_t array, dimension N if eigenvalue only
+ *          plasma_complex64_t array, dimension n if eigenvalue only
  *          requested or (LDV*blkcnt*Vblksiz) if Eigenvectors requested
  *          The Householder reflectors are stored in this array.
  *
- * @param[in] TAU
- *          plasma_complex64_t array, dimension (N).
+ * @param[in] tau
+ *          plasma_complex64_t array, dimension (n).
  *          The scalar factors of the Householder reflectors are stored
  *          in this array.
  *
@@ -76,11 +76,11 @@
  *          it serve to calculate the pointer to the position where to store the
  *          Vs and Ts.
  *
- * @param[in] WANTZ
+ * @param[in] wantz
  *          constant which indicate if Eigenvalue are requested or both
  *          Eigenvalue/Eigenvectors.
  *
- * @param[in] WORK
+ * @param[in] work
  *          Workspace of size nb.
  *
  *******************************************************************************
@@ -94,31 +94,32 @@
 /***************************************************************************//**
  *          TYPE 3-BAND Lower-columnwise-Householder
  ***************************************************************************/
-void core_zhbtype3cb(int N, int NB,
-                     plasma_complex64_t *A, int LDA,
-                     const plasma_complex64_t *V, const plasma_complex64_t *TAU,
-                     int st, int ed, int sweep, int Vblksiz, int WANTZ,
-                     plasma_complex64_t *WORK)
+void plasma_core_zhbtype3cb(
+    int n, int nb,
+    plasma_complex64_t *A, int lda,
+    const plasma_complex64_t *V, const plasma_complex64_t *tau,
+    int st, int ed, int sweep, int Vblksiz, int wantz,
+    plasma_complex64_t *work)
 {
-    int len, LDX;
+    int len, ldx;
     int blkid, vpos, taupos, tpos;
 
-    if( WANTZ == 0 ) {
-        vpos   = ((sweep+1)%2)*N + st;
-        taupos = ((sweep+1)%2)*N + st;
-    } else {
-        findVTpos(N, NB, Vblksiz, sweep, st,
+    if (wantz == 0) {
+        vpos   = ((sweep+1)%2)*n + st;
+        taupos = ((sweep+1)%2)*n + st;
+    }
+    else {
+        findVTpos(n, nb, Vblksiz, sweep, st,
                   &vpos, &taupos, &tpos, &blkid);
     }
 
-    LDX = LDA-1;
+    ldx = lda-1;
     len = ed-st+1;
 
-    /* Apply left and right on A(st:ed,st:ed)*/
-    core_zlarfy(len, A(st,st), LDX, V(vpos), TAU(taupos), WORK);
-    return;
+    // Apply left and right on A(st:ed, st:ed)
+    plasma_core_zlarfy(len, A(st, st), ldx, V(vpos), tau(taupos), work);
 }
 /***************************************************************************/
 #undef A
 #undef V
-#undef TAU
+#undef tau
