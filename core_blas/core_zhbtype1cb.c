@@ -55,7 +55,7 @@
  *
  * @param[out] V
  *          PLASMA_Complex64_t array, dimension n if eigenvalue only
- *          requested or (LDV*blkcnt*Vblksiz) if Eigenvectors requested
+ *          requested or (ldv*blkcnt*Vblksiz) if Eigenvectors requested
  *          The Householder reflectors are stored in this array.
  *
  * @param[out] tau

@@ -46,8 +46,8 @@
 
 //  Parallel bulge chasing column-wise, static scheduling
 void plasma_pzheb2trd_static(
-    plasma_enum_t uplo, int n, int NB, int Vblksiz,
-    plasma_complex64_t *A, int LDA,
+    plasma_enum_t uplo, int n, int nb, int Vblksiz,
+    plasma_complex64_t *A, int lda,
     plasma_complex64_t *V, plasma_complex64_t *tau,
     double *D, double *E, int wantz,
     plasma_workspace_t work,
@@ -93,11 +93,11 @@ void plasma_pzheb2trd_static(
 
     // Some tunning for the bulge chasing code;
     // see technical report for details.
-    int nbtiles = plasma_ceildiv(n,NB);
+    int nbtiles = plasma_ceildiv(n,nb);
     int colblktile = 1;
     int grsiz = 1;
     int maxrequiredcores = imax( nbtiles/colblktile, 1 );
-    int colpercore = colblktile*NB;
+    int colpercore = colblktile*nb;
     int thgrsiz = n;
 
 
@@ -142,14 +142,14 @@ void plasma_pzheb2trd_static(
                         for (k = 1; k <= grsiz; ++k) {
                             myid = (i - sweepid)*(stepercol*grsiz) + (m - 1)*grsiz + k;
                             if (myid % 2 == 0) {
-                                colpt = (myid/2)*NB + 1 + sweepid - 1;
-                                stind = colpt - NB + 1;
+                                colpt = (myid/2)*nb + 1 + sweepid - 1;
+                                stind = colpt - nb + 1;
                                 edind = imin(colpt,n);
                                 blklastind = colpt;
                             }
                             else {
-                                colpt = ((myid + 1)/2)*NB + 1 + sweepid - 1;
-                                stind = colpt - NB + 1;
+                                colpt = ((myid + 1)/2)*nb + 1 + sweepid - 1;
+                                stind = colpt - nb + 1;
                                 edind = imin(colpt,n);
                                 if ((stind >= edind - 1) && (edind == n))
                                     blklastind = n;
@@ -162,7 +162,7 @@ void plasma_pzheb2trd_static(
                                 if (myid == 1) {
                                     ss_cond_wait(myid + shift - 1, 0, sweepid - 1);
                                     plasma_core_zhbtype1cb(
-                                        n, NB, A, LDA, V, tau,
+                                        n, nb, A, lda, V, tau,
                                         stind - 1, edind - 1, sweepid - 1,
                                         Vblksiz, wantz, my_work);
                                     ss_cond_set(myid, 0, sweepid);
@@ -177,13 +177,13 @@ void plasma_pzheb2trd_static(
                                     ss_cond_wait(myid + shift - 1, 0, sweepid - 1);
                                     if (myid%2 == 0) {
                                         plasma_core_zhbtype2cb(
-                                            n, NB, A, LDA, V, tau,
+                                            n, nb, A, lda, V, tau,
                                             stind - 1, edind - 1, sweepid - 1,
                                             Vblksiz, wantz, my_work);
                                     }
                                     else {
                                         plasma_core_zhbtype3cb(
-                                            n, NB, A, LDA, V, tau,
+                                            n, nb, A, lda, V, tau,
                                             stind - 1, edind - 1, sweepid - 1,
                                             Vblksiz, wantz, my_work);
                                     }
@@ -225,16 +225,16 @@ void plasma_pzheb2trd_static(
     // Sequential code here so only core 0 will work.
     if (uplo == PlasmaLower) {
         for (int i = 0; i < n - 1; ++i) {
-            D[i] = creal(A[i*LDA]);
-            E[i] = creal(A[i*LDA + 1]);
+            D[i] = creal(A[i*lda]);
+            E[i] = creal(A[i*lda + 1]);
         }
-        D[n - 1] = creal(A[(n - 1)*LDA]);
+        D[n - 1] = creal(A[(n - 1)*lda]);
     }
     else { // PlasmaUpper not yet tested
         for (int i = 0; i < n - 1; ++i) {
-            D[i] = creal(A[i*LDA + NB]);
-            E[i] = creal(A[i*LDA + NB - 1]);
+            D[i] = creal(A[i*lda + nb]);
+            E[i] = creal(A[i*lda + nb - 1]);
         }
-        D[n - 1] = creal(A[(n - 1)*LDA + NB]);
+        D[n - 1] = creal(A[(n - 1)*lda + nb]);
     }
 }

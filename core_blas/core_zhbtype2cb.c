@@ -55,7 +55,7 @@
  *
  * @param[in, out] V
  *          plasma_complex64_t array, dimension n if eigenvalue only
- *          requested or (LDV*blkcnt*Vblksiz) if Eigenvectors requested
+ *          requested or (ldv*blkcnt*Vblksiz) if Eigenvectors requested
  *          The Householder reflectors of the previous type 1 are used here
  *          to continue update then new one are generated to eliminate the
  *          bulge and stored in this array.

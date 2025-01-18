@@ -31,7 +31,7 @@ void plasma_pzhe2hb(plasma_enum_t uplo,
     if (sequence->status != PlasmaSuccess)
         return;
 
-    // Case nb>n  only 1 tile
+    // Case nb > n only 1 tile
     if (A.mt > A.m)
         return;
 

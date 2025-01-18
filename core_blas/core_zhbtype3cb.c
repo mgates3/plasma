@@ -46,14 +46,14 @@
  *          The size of the band.
  *
  * @param[in,out] A
- *          A pointer to the matrix A of size (2*nb+1)-by-n.
+ *          A pointer to the matrix A of size (2*nb + 1)-by-n.
  *
  * @param[in] lda
- *          The leading dimension of the matrix A. lda >= max(1, 2*nb+1)
+ *          The leading dimension of the matrix A. lda >= max(1, 2*nb + 1)
  *
  * @param[in] V
- *          plasma_complex64_t array, dimension n if eigenvalue only
- *          requested or (LDV*blkcnt*Vblksiz) if Eigenvectors requested
+ *          plasma_complex64_t array, dimension n if only eigenvalues are
+ *          requested, or (ldv*blkcnt*Vblksiz) if eigenvectors are requested.
  *          The Householder reflectors are stored in this array.
  *
  * @param[in] tau
@@ -68,17 +68,17 @@
  *          A pointer to the end index where this kernel will operate.
  *
  * @param[in] sweep
- *          The sweep number that is eliminated. it serve to calculate the
+ *          The sweep number that is eliminated. It serves to calculate the
  *          pointer to the position where to store the Vs and Ts.
  *
  * @param[in] Vblksiz
- *          constant which correspond to the blocking used when applying the Vs.
- *          it serve to calculate the pointer to the position where to store the
- *          Vs and Ts.
+ *          Constant that corresponds to the blocking used when applying the Vs.
+ *          It serves to calculate the pointer to the position where to store
+ *          the Vs and Ts.
  *
  * @param[in] wantz
- *          constant which indicate if Eigenvalue are requested or both
- *          Eigenvalue/Eigenvectors.
+ *          Specifies whether only eigenvalues are requested or both
+ *          eigenvalue and eigenvectors.
  *
  * @param[in] work
  *          Workspace of size nb.

@@ -355,7 +355,7 @@ void plasma_omp_zheevd(
     }
     double stop = omp_get_wtime();
     double time = stop - start;
-    //printf("\n N=%d:  1-stage time = %lf\t", n, time);
+    //printf("\n n=%d:  1-stage time = %lf\t", n, time);
 
     //====================
     //  Bulge chasing
@@ -468,7 +468,7 @@ void plasma_omp_zheevd(
         //=======================================
         // Apply Q1 from the first stage .
         //=======================================
-        // If nb > N, Q1 doesn't need to be applied,
+        // If nb > n, Q1 doesn't need to be applied,
         // only bulge chasing has been done
         if (nb < n) {
             plasma_desc_t Q;
@@ -504,7 +504,7 @@ void plasma_omp_zheevd(
             }
 
             plasma_desc_destroy(&Q);
-        } // end (nb < N)
+        } // end (nb < n)
     }
     stop = omp_get_wtime();
     time = stop - start;
